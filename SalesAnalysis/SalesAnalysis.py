@@ -1,7 +1,3 @@
-# sales_analysis_glue_by_category_region_decimal_safe.py
-# Glue Job script (Script editor) - ETL agrupado por (category, region), Decimal-safe para DynamoDB, plots->S3
-# Runtime: Glue 3.0 (Spark), Python 3.x
-
 from awsglue.context import GlueContext
 from pyspark.context import SparkContext
 from pyspark.sql import functions as F
@@ -12,7 +8,6 @@ import math
 import traceback
 from decimal import Decimal, InvalidOperation
 
-# Optional libs
 try:
     import pandas as pd
 except Exception as e:
@@ -36,19 +31,18 @@ except Exception as e:
     sns = None
     print("seaborn not available:", e)
 
-# ----------------- CONFIG - editar según entorno -----------------
+
 DATABASE = "salesdb"                         # Glue database name
 TABLE_CATALOG = "salesraw"           # Glue table name (crawler output)
 S3_PATH = "s3://big-data-practica-1/raw/"    # fallback S3 path/prefix
 BUCKET = "big-data-practica-1"               # bucket para plots/tmp
 REGION = "us-east-1"
-SUMMARY_TABLE_NAME = "sales_summary"         # DynamoDB table for category+region summary
-TOP5_TABLE_NAME = "sales_top5_by_region"     # DynamoDB table for top5
+SUMMARY_TABLE_NAME = "sales_summary"        
+TOP5_TABLE_NAME = "sales_top5_by_region"     
 TEMP_DIR = f"s3://{BUCKET}/tmp/"
 MAX_PANDAS_ROWS = 20000
 PLOTS_PREFIX = "plots/"
-TEST_PUT = False  # poner True temporalmente para verificar permisos desde Glue
-# ---------------------------------------------------------------
+TEST_PUT = False  
 
 # Init Glue/Spark
 sc = SparkContext.getOrCreate()
@@ -194,7 +188,7 @@ except Exception as e:
 print("Normalizando columnas. Columnas originales:", df.columns)
 cols = set(df.columns)
 
-# total_amount normalización (puede venir como sale_amount, amount, sale_total)
+# total_amount normalización
 if "total_amount" not in cols:
     if "sale_amount" in cols:
         df = df.withColumn("total_amount", F.col("sale_amount").cast("double"))
@@ -272,7 +266,7 @@ try:
 except Exception as e:
     print("Preview failed:", e)
 
-# ---------------- TRANSFORMACIONES requeridas: agrupación por (category, region) ----------------
+# ---------------- TRANSFORMACIONES ---------
 print("Computando summary por (category, region)...")
 summary_by_category_region = df.groupBy("category", "region").agg(
     F.sum("total_amount").alias("total_sales"),
@@ -481,8 +475,6 @@ if TEST_PUT:
     except Exception as e:
         print("DEBUG: put_item test FAILED:", e)
 
-# ---------------- plots (si pandas + matplotlib disponibles) ----------------
-print("Generando plots (si pandas + matplotlib disponibles)...")
 if plt is not None and pd is not None:
     try:
         # 1) Total Sales by Category (agregado por category sumando regiones)
@@ -587,3 +579,4 @@ else:
     print("Skipping plotting: pandas o matplotlib no disponibles en el entorno.")
 
 print("SCRIPT FINISHED")
+
